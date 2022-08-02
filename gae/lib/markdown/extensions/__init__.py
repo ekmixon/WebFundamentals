@@ -36,7 +36,7 @@ class Extension(object):
                           'Python-Markdown version 2.6 for more info.',
                           DeprecationWarning)
         # check for configs kwarg for backward compat.
-        if 'configs' in kwargs.keys():
+        if 'configs' in kwargs:
             if kwargs['configs'] is not None:
                 self.setConfigs(kwargs.pop('configs', {}))
             warnings.warn('Extension classes accepting a dict on the single '
@@ -52,10 +52,7 @@ class Extension(object):
 
     def getConfig(self, key, default=''):
         """ Return a setting for the given key or an empty string. """
-        if key in self.config:
-            return self.config[key][0]
-        else:
-            return default
+        return self.config[key][0] if key in self.config else default
 
     def getConfigs(self):
         """ Return all configs settings as a dict. """

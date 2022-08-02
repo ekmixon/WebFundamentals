@@ -71,24 +71,19 @@ def parse_options(args=None, values=None):
 
     (options, args) = parser.parse_args(args, values)
 
-    if len(args) == 0:
-        input_file = None
-    else:
-        input_file = args[0]
-
+    input_file = None if len(args) == 0 else args[0]
     if not options.extensions:
         options.extensions = []
 
     extension_configs = {}
     if options.configfile:
         with codecs.open(
-            options.configfile, mode="r", encoding=options.encoding
-        ) as fp:
+                    options.configfile, mode="r", encoding=options.encoding
+                ) as fp:
             try:
                 extension_configs = yaml.load(fp)
             except Exception as e:
-                message = "Failed parsing extension config file: %s" % \
-                          options.configfile
+                message = f"Failed parsing extension config file: {options.configfile}"
                 e.args = (message,) + e.args[1:]
                 raise
 

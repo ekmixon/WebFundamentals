@@ -158,13 +158,12 @@ class SubstituteTextPattern(HtmlPattern):
         self.markdown = markdown_instance
 
     def handleMatch(self, m):
-        result = ''
-        for part in self.replace:
-            if isinstance(part, int):
-                result += m.group(part)
-            else:
-                result += self.markdown.htmlStash.store(part, safe=True)
-        return result
+        return ''.join(
+            m.group(part)
+            if isinstance(part, int)
+            else self.markdown.htmlStash.store(part, safe=True)
+            for part in self.replace
+        )
 
 
 class SmartyExtension(Extension):
@@ -178,7 +177,7 @@ class SmartyExtension(Extension):
         }
         super(SmartyExtension, self).__init__(*args, **kwargs)
         self.substitutions = dict(substitutions)
-        self.substitutions.update(self.getConfig('substitutions', default={}))
+        self.substitutions |= self.getConfig('substitutions', default={})
 
     def _addPatterns(self, md, patterns, serie):
         for ind, pattern in enumerate(patterns):

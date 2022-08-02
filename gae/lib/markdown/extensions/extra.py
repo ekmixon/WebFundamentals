@@ -118,7 +118,7 @@ class MarkdownInHtmlProcessor(BlockProcessor):
         # Process Text
         if (self.parser.blockprocessors.contain_span_tags.match(  # Span Mode
                 tag['tag']) and markdown_value != 'block') or \
-                markdown_value == 'span':
+                    markdown_value == 'span':
             element.text = '\n'.join(block)
         else:                                                     # Block Mode
             i = self.parser.blockprocessors.tag_counter + 1

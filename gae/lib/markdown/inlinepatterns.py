@@ -198,8 +198,7 @@ class Pattern(object):
 
         """
         self.pattern = pattern
-        self.compiled_re = re.compile("^(.*?)%s(.*)$" % pattern,
-                                      re.DOTALL | re.UNICODE)
+        self.compiled_re = re.compile(f"^(.*?){pattern}(.*)$", re.DOTALL | re.UNICODE)
 
         # Api for Markdown to pass safe_mode into instance
         self.safe_mode = False
@@ -233,7 +232,7 @@ class Pattern(object):
         except KeyError:  # pragma: no cover
             return text
 
-        def itertext(el):  # pragma: no cover
+        def itertext(el):    # pragma: no cover
             ' Reimplement Element.itertext for older python versions '
             tag = el.tag
             if not isinstance(tag, util.string_type) and tag is not None:
@@ -241,8 +240,7 @@ class Pattern(object):
             if el.text:
                 yield el.text
             for e in el:
-                for s in itertext(e):
-                    yield s
+                yield from itertext(e)
                 if e.tail:
                     yield e.tail
 
@@ -255,6 +253,7 @@ class Pattern(object):
                 else:
                     # An etree Element - return text content only
                     return ''.join(itertext(value))
+
         return util.INLINE_PLACEHOLDER_RE.sub(get_stash, text)
 
 
@@ -270,7 +269,7 @@ class EscapePattern(Pattern):
     def handleMatch(self, m):
         char = m.group(2)
         if char in self.markdown.ESCAPED_CHARS:
-            return '%s%s%s' % (util.STX, ord(char), util.ETX)
+            return f'{util.STX}{ord(char)}{util.ETX}'
         else:
             return None
 
@@ -329,8 +328,7 @@ class HtmlPattern(Pattern):
     """ Store raw inline html and return a placeholder. """
     def handleMatch(self, m):
         rawhtml = self.unescape(m.group(2))
-        place_holder = self.markdown.htmlStash.store(rawhtml)
-        return place_holder
+        return self.markdown.htmlStash.store(rawhtml)
 
     def unescape(self, text):
         """ Return unescaped text given text with an inline placeholder. """
@@ -357,9 +355,7 @@ class LinkPattern(Pattern):
         el = util.etree.Element("a")
         el.text = m.group(2)
         title = m.group(13)
-        href = m.group(9)
-
-        if href:
+        if href := m.group(9):
             if href[0] == "<":
                 href = href[1:-1]
             el.set("href", self.sanitize_url(self.unescape(href.strip())))
@@ -515,14 +511,14 @@ class AutomailPattern(Pattern):
             """Return entity definition by code, or the code if not defined."""
             entity = entities.codepoint2name.get(code)
             if entity:
-                return "%s%s;" % (util.AMP_SUBSTITUTE, entity)
+                return f"{util.AMP_SUBSTITUTE}{entity};"
             else:
                 return "%s#%d;" % (util.AMP_SUBSTITUTE, code)
 
         letters = [codepoint2name(ord(letter)) for letter in email]
         el.text = util.AtomicString(''.join(letters))
 
-        mailto = "mailto:" + email
+        mailto = f"mailto:{email}"
         mailto = "".join([util.AMP_SUBSTITUTE + '#%d;' %
                           ord(letter) for letter in mailto])
         el.set('href', mailto)

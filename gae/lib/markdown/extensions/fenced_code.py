@@ -65,39 +65,35 @@ class FencedBlockPreprocessor(Preprocessor):
             self.checked_for_codehilite = True
 
         text = "\n".join(lines)
-        while 1:
-            m = self.FENCED_BLOCK_RE.search(text)
-            if m:
-                lang = ''
-                if m.group('lang'):
-                    lang = self.LANG_TAG % m.group('lang')
+        while 1 and (m := self.FENCED_BLOCK_RE.search(text)):
+            lang = ''
+            if m.group('lang'):
+                lang = self.LANG_TAG % m.group('lang')
 
-                # If config is not empty, then the codehighlite extension
-                # is enabled, so we call it to highlight the code
-                if self.codehilite_conf:
-                    highliter = CodeHilite(
-                        m.group('code'),
-                        linenums=self.codehilite_conf['linenums'][0],
-                        guess_lang=self.codehilite_conf['guess_lang'][0],
-                        css_class=self.codehilite_conf['css_class'][0],
-                        style=self.codehilite_conf['pygments_style'][0],
-                        use_pygments=self.codehilite_conf['use_pygments'][0],
-                        lang=(m.group('lang') or None),
-                        noclasses=self.codehilite_conf['noclasses'][0],
-                        hl_lines=parse_hl_lines(m.group('hl_lines'))
-                    )
+            # If config is not empty, then the codehighlite extension
+            # is enabled, so we call it to highlight the code
+            if self.codehilite_conf:
+                highliter = CodeHilite(
+                    m.group('code'),
+                    linenums=self.codehilite_conf['linenums'][0],
+                    guess_lang=self.codehilite_conf['guess_lang'][0],
+                    css_class=self.codehilite_conf['css_class'][0],
+                    style=self.codehilite_conf['pygments_style'][0],
+                    use_pygments=self.codehilite_conf['use_pygments'][0],
+                    lang=(m.group('lang') or None),
+                    noclasses=self.codehilite_conf['noclasses'][0],
+                    hl_lines=parse_hl_lines(m.group('hl_lines'))
+                )
 
-                    code = highliter.hilite()
-                else:
-                    code = self.CODE_WRAP % (lang,
-                                             self._escape(m.group('code')))
-
-                placeholder = self.markdown.htmlStash.store(code, safe=True)
-                text = '%s\n%s\n%s' % (text[:m.start()],
-                                       placeholder,
-                                       text[m.end():])
+                code = highliter.hilite()
             else:
-                break
+                code = self.CODE_WRAP % (lang,
+                                         self._escape(m.group('code')))
+
+            placeholder = self.markdown.htmlStash.store(code, safe=True)
+            text = '%s\n%s\n%s' % (text[:m.start()],
+                                   placeholder,
+                                   text[m.end():])
         return text.split("\n")
 
     def _escape(self, txt):

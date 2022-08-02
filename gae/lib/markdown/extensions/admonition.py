@@ -62,7 +62,7 @@ class AdmonitionProcessor(BlockProcessor):
         if m:
             klass, title = self.get_class_and_title(m)
             div = etree.SubElement(parent, 'div')
-            div.set('class', '%s %s' % (self.CLASSNAME, klass))
+            div.set('class', f'{self.CLASSNAME} {klass}')
             if title:
                 p = etree.SubElement(div, 'p')
                 p.text = title

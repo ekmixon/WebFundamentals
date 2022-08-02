@@ -90,12 +90,16 @@ class FootnoteExtension(Extension):
         """ Return ElementTree Element that contains Footnote placeholder. """
         def finder(element):
             for child in element:
-                if child.text:
-                    if child.text.find(self.getConfig("PLACE_MARKER")) > -1:
-                        return child, element, True
-                if child.tail:
-                    if child.tail.find(self.getConfig("PLACE_MARKER")) > -1:
-                        return child, element, False
+                if (
+                    child.text
+                    and child.text.find(self.getConfig("PLACE_MARKER")) > -1
+                ):
+                    return child, element, True
+                if (
+                    child.tail
+                    and child.tail.find(self.getConfig("PLACE_MARKER")) > -1
+                ):
+                    return child, element, False
                 child_res = finder(child)
                 if child_res is not None:
                     return child_res
@@ -109,16 +113,14 @@ class FootnoteExtension(Extension):
         self.footnotes[id] = text
 
     def get_separator(self):
-        if self.md.output_format in ['html5', 'xhtml5']:
-            return '-'
-        return ':'
+        return '-' if self.md.output_format in ['html5', 'xhtml5'] else ':'
 
     def makeFootnoteId(self, id):
         """ Return footnote link id. """
         if self.getConfig("UNIQUE_IDS"):
             return 'fn%s%d-%s' % (self.get_separator(), self.unique_prefix, id)
         else:
-            return 'fn%s%s' % (self.get_separator(), id)
+            return f'fn{self.get_separator()}{id}'
 
     def makeFootnoteRefId(self, id):
         """ Return footnote back-link id. """
@@ -126,7 +128,7 @@ class FootnoteExtension(Extension):
             return 'fnref%s%d-%s' % (self.get_separator(),
                                      self.unique_prefix, id)
         else:
-            return 'fnref%s%s' % (self.get_separator(), id)
+            return f'fnref{self.get_separator()}{id}'
 
     def makeFootnotesDiv(self, root):
         """ Return div of footnotes as et Element. """
@@ -144,7 +146,7 @@ class FootnoteExtension(Extension):
             li.set("id", self.makeFootnoteId(id))
             self.parser.parseChunk(li, self.footnotes[id])
             backlink = etree.Element("a")
-            backlink.set("href", "#" + self.makeFootnoteRefId(id))
+            backlink.set("href", f"#{self.makeFootnoteRefId(id)}")
             if self.md.output_format not in ['html5', 'xhtml5']:
                 backlink.set("rev", "footnote")  # Invalid in HTML5
             backlink.set("class", "footnote-backref")
@@ -186,8 +188,7 @@ class FootnotePreprocessor(Preprocessor):
         newlines = []
         i = 0
         while True:
-            m = DEF_RE.match(lines[i])
-            if m:
+            if m := DEF_RE.match(lines[i]):
                 fn, _i = self.detectTabbed(lines[i+1:])
                 fn.insert(0, m.group(2))
                 i += _i-1  # skip past footnote
@@ -267,18 +268,17 @@ class FootnotePattern(Pattern):
 
     def handleMatch(self, m):
         id = m.group(2)
-        if id in self.footnotes.footnotes.keys():
-            sup = etree.Element("sup")
-            a = etree.SubElement(sup, "a")
-            sup.set('id', self.footnotes.makeFootnoteRefId(id))
-            a.set('href', '#' + self.footnotes.makeFootnoteId(id))
-            if self.footnotes.md.output_format not in ['html5', 'xhtml5']:
-                a.set('rel', 'footnote')  # invalid in HTML5
-            a.set('class', 'footnote-ref')
-            a.text = text_type(self.footnotes.footnotes.index(id) + 1)
-            return sup
-        else:
+        if id not in self.footnotes.footnotes.keys():
             return None
+        sup = etree.Element("sup")
+        a = etree.SubElement(sup, "a")
+        sup.set('id', self.footnotes.makeFootnoteRefId(id))
+        a.set('href', f'#{self.footnotes.makeFootnoteId(id)}')
+        if self.footnotes.md.output_format not in ['html5', 'xhtml5']:
+            a.set('rel', 'footnote')  # invalid in HTML5
+        a.set('class', 'footnote-ref')
+        a.text = text_type(self.footnotes.footnotes.index(id) + 1)
+        return sup
 
 
 class FootnoteTreeprocessor(Treeprocessor):
@@ -290,8 +290,7 @@ class FootnoteTreeprocessor(Treeprocessor):
     def run(self, root):
         footnotesDiv = self.footnotes.makeFootnotesDiv(root)
         if footnotesDiv is not None:
-            result = self.footnotes.findFootnotesPlaceholder(root)
-            if result:
+            if result := self.footnotes.findFootnotesPlaceholder(root):
                 child, parent, isText = result
                 ind = parent.getchildren().index(child)
                 if isText:

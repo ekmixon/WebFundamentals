@@ -63,9 +63,10 @@ class RawHtmlPostprocessor(Postprocessor):
                     html = self.markdown.html_replacement_text
             if (self.isblocklevel(html) and
                (safe or not self.markdown.safeMode)):
-                replacements["<p>%s</p>" %
-                             (self.markdown.htmlStash.get_placeholder(i))] = \
-                    html + "\n"
+                replacements[
+                    f"<p>{self.markdown.htmlStash.get_placeholder(i)}</p>"
+                ] = (html + "\n")
+
             replacements[self.markdown.htmlStash.get_placeholder(i)] = html
 
         if replacements:
@@ -82,12 +83,8 @@ class RawHtmlPostprocessor(Postprocessor):
         return html.replace('"', '&quot;')
 
     def isblocklevel(self, html):
-        m = re.match(r'^\<\/?([^ >]+)', html)
-        if m:
-            if m.group(1)[0] in ('!', '?', '@', '%'):
-                # Comment, php etc...
-                return True
-            return util.isBlockLevel(m.group(1))
+        if m := re.match(r'^\<\/?([^ >]+)', html):
+            return True if m[1][0] in ('!', '?', '@', '%') else util.isBlockLevel(m[1])
         return False
 
 

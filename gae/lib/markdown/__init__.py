@@ -212,7 +212,7 @@ class Markdown(object):
             ext_args = ext_name[pos+1:-1]
             ext_name = ext_name[:pos]
             pairs = [x.split("=") for x in ext_args.split(",")]
-            configs.update([(x.strip(), y.strip()) for (x, y) in pairs])
+            configs |= [(x.strip(), y.strip()) for (x, y) in pairs]
             warnings.warn('Setting configs in the Named Extension string is '
                           'deprecated. It is recommended that you '
                           'pass an instance of the extension class to '
@@ -223,7 +223,7 @@ class Markdown(object):
 
         # Get class name (if provided): `path.to.module:ClassName`
         ext_name, class_name = ext_name.split(':', 1) \
-            if ':' in ext_name else (ext_name, '')
+                if ':' in ext_name else (ext_name, '')
 
         # Try loading the extension first from one place, then another
         try:
@@ -234,8 +234,11 @@ class Markdown(object):
             )
             # For backward compat (until deprecation)
             # check that this is an extension.
-            if ('.' not in ext_name and not (hasattr(module, 'makeExtension') or
-               (class_name and hasattr(module, class_name)))):
+            if (
+                '.' not in ext_name
+                and not hasattr(module, 'makeExtension')
+                and (not class_name or not hasattr(module, class_name))
+            ):
                 # We have a name conflict
                 # eg: extensions=['tables'] and PyTables is installed
                 raise ImportError
@@ -277,7 +280,7 @@ class Markdown(object):
                                   DeprecationWarning)
                 except ImportError as e:
                     message = "Failed loading extension '%s' from '%s', '%s' " \
-                        "or '%s'" % (ext_name, ext_name, module_name,
+                            "or '%s'" % (ext_name, ext_name, module_name,
                                      module_name_old_style)
                     e.args = (message,) + e.args[1:]
                     raise
@@ -285,16 +288,15 @@ class Markdown(object):
         if class_name:
             # Load given class name from module.
             return getattr(module, class_name)(**configs)
-        else:
-            # Expect  makeExtension() function to return a class.
-            try:
-                return module.makeExtension(**configs)
-            except AttributeError as e:
-                message = e.args[0]
-                message = "Failed to initiate extension " \
+        # Expect  makeExtension() function to return a class.
+        try:
+            return module.makeExtension(**configs)
+        except AttributeError as e:
+            message = e.args[0]
+            message = "Failed to initiate extension " \
                           "'%s': %s" % (ext_name, message)
-                e.args = (message,) + e.args[1:]
-                raise
+            e.args = (message,) + e.args[1:]
+            raise
 
     def registerExtension(self, extension):
         """ This gets called by the extension """
@@ -320,10 +322,9 @@ class Markdown(object):
         try:
             self.serializer = self.output_formats[self.output_format]
         except KeyError as e:
-            valid_formats = list(self.output_formats.keys())
-            valid_formats.sort()
+            valid_formats = sorted(self.output_formats.keys())
             message = 'Invalid Output Format: "%s". Use one of %s.' \
-                % (self.output_format,
+                    % (self.output_format,
                    '"' + '", "'.join(valid_formats) + '"')
             e.args = (message,) + e.args[1:]
             raise
@@ -380,12 +381,11 @@ class Markdown(object):
         output = self.serializer(root)
         if self.stripTopLevelTags:
             try:
-                start = output.index(
-                    '<%s>' % self.doc_tag) + len(self.doc_tag) + 2
-                end = output.rindex('</%s>' % self.doc_tag)
+                start = ((output.index(f'<{self.doc_tag}>') + len(self.doc_tag)) + 2)
+                end = output.rindex(f'</{self.doc_tag}>')
                 output = output[start:end].strip()
             except ValueError:  # pragma: no cover
-                if output.strip().endswith('<%s />' % self.doc_tag):
+                if output.strip().endswith(f'<{self.doc_tag} />'):
                     # We have an empty document
                     output = ''
                 else:

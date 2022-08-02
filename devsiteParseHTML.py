@@ -21,7 +21,7 @@ def parse(requestPath, fileLocation, content, lang='en'):
   if htmlTag is None:
     logging.warning('Does not contain <html> root element')
   else:
-    htmlTag = htmlTag.group(0)
+    htmlTag = htmlTag[0]
     # Check the HTML tag contains the devsite
     if htmlTag.find('devsite') == -1:
       return content
@@ -46,7 +46,7 @@ def parse(requestPath, fileLocation, content, lang='en'):
 
   # Read the project.yaml file
   projectPath = re.search('name=\"project_path\" value=\"(.*?)\"', head)
-  projectPath = projectPath.group(1)
+  projectPath = projectPath[1]
   projectYaml = yaml.load(devsiteHelper.readFile(projectPath, lang))
   context['projectYaml'] = projectYaml
 
@@ -58,7 +58,7 @@ def parse(requestPath, fileLocation, content, lang='en'):
 
   # Read the book.yaml file and generate the left hand nav
   bookPath = re.search('name=\"book_path\" value=\"(.*?)\"', head)
-  bookPath = bookPath.group(1)
+  bookPath = bookPath[1]
   bookYaml = devsiteHelper.parseBookYaml(bookPath, lang)
   context['bookYaml'] = devsiteHelper.expandBook(bookYaml)
   context['lowerTabs'] = devsiteHelper.getLowerTabs(bookYaml)
@@ -80,14 +80,12 @@ def parse(requestPath, fileLocation, content, lang='en'):
 
   # Read the page title
   pageTitle = []
-  titleRO = re.search('<title>(.*?)</title>', head)
-  if titleRO:
-    title = titleRO.group(1)
+  if titleRO := re.search('<title>(.*?)</title>', head):
+    title = titleRO[1]
     pageTitle.append(title)
     if body.find('<h1>') == -1:
       body = '<h1 class="page-title">' + title + '</h1>\n\n' + body
-  pageTitle.append(projectYaml['name'])
-  pageTitle.append('WebFu Staging')
+  pageTitle.extend((projectYaml['name'], 'WebFu Staging'))
   context['pageTitle'] = ' | '.join(pageTitle)
 
   # Get the footer path & read/parse the footer file.
@@ -106,22 +104,20 @@ def parse(requestPath, fileLocation, content, lang='en'):
 
   context['content'] = body
 
-  # Checks if the page should be displayed in full width mode
-  fullWidth = re.search('name=\"full_width\" value=\"true\"', head)
-  if fullWidth:
+  if fullWidth := re.search('name=\"full_width\" value=\"true\"', head):
     context['fullWidth'] = True
 
   # # Build the table of contents & transform so it fits within DevSite
   context['renderedTOC'] = '<b>TOC Not Implemented</b> for DevSite HTML Pages'
 
-  gitHubEditUrl = 'https://github.com/google/WebFundamentals/blob/'
-  gitHubEditUrl += 'main/src/content/'
+  gitHubEditUrl = (
+      'https://github.com/google/WebFundamentals/blob/' + 'main/src/content/')
   gitHubEditUrl += fileLocation.replace(SOURCE_PATH, '')
   context['gitHubEditUrl'] = gitHubEditUrl
 
   gitHubIssueUrl = 'https://github.com/google/WebFundamentals/issues/'
   gitHubIssueUrl += 'new?title=Feedback for: ' + context['pageTitle'] + ' ['
-  gitHubIssueUrl += lang + ']&body='
+  gitHubIssueUrl += f'{lang}]&body='
   gitHubIssueUrl += gitHubEditUrl
   context['gitHubIssueUrl'] = gitHubIssueUrl
 
